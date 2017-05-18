@@ -1,49 +1,56 @@
-const paph = (recursionLimit = 64) => {
+'use strict';
+
+const paph = () => {
     const transforms = {};
 
-    const add = (initial, final, transform) => {
-        if (!transforms[initial]) {
-            transforms[initial] = [];
+    const add = (initialName, finalName, transform) => {
+        if (!transforms[initialName]) {
+            transforms[initialName] = [];
         }
-        transforms[initial].push({final, transform});
+        transforms[initialName].push({finalName, transform});
     };
 
-    const find = (currentAddress, initial, final) => {
-        if (currentAddress.length > recursionLimit) {
-            throw new Error('recursion limit exceeded');
-        }
-        if (initial === final) {
-            return currentAddress;
-        }
-        let transformPossibilities = transforms[initial];
-        if (!transformPossibilities) {
-            return null;
-        }
-        let newAddress = currentAddress.slice();
-        newAddress.push(initial);
-        let successes = [];
-        for (let i = 0; i < transformPossibilities.length; ++i) {
-            let tempAddress = newAddress.slice();
-            tempAddress.push(i);
-            let path = find(tempAddress, transformPossibilities[i].final, final);
-            if (path !== null) {
-                successes.push(path);
+    const findPath = (initialName, finalName) => {
+        const traversed = {};
+        const _find = (currentAddress, currentName) => {
+            if (traversed[currentName] < currentAddress.length) {
+                return null;
             }
-        }
-        if (successes.length > 0) {
-            return successes.reduce((shortestSuccess, currentSuccess) => {
-                return shortestSuccess.length > currentSuccess.length
-                    ? currentSuccess
-                    : shortestSuccess;
-            }, {length: Infinity});
-        }
-        return null;
+            traversed[currentName] = currentAddress.length;
+            if (currentName === finalName) {
+                return currentAddress;
+            }
+            let transformPossibilities = transforms[currentName];
+            if (!transformPossibilities) {
+                return null;
+            }
+            let newAddress = currentAddress.slice();
+            newAddress.push(currentName);
+            let successes = [];
+            for (let i = 0; i < transformPossibilities.length; ++i) {
+                let tempAddress = newAddress.slice();
+                tempAddress.push(i);
+                let path = _find(tempAddress, transformPossibilities[i].finalName);
+                if (path !== null) {
+                    successes.push(path);
+                }
+            }
+            if (successes.length > 0) {
+                return successes.reduce((shortestSuccess, currentSuccess) => {
+                    return shortestSuccess.length > currentSuccess.length
+                        ? currentSuccess
+                        : shortestSuccess;
+                }, {length: Infinity});
+            }
+            return null;
+        };
+        return _find([], initialName);
     };
 
-    const exec = (initial, final, val) => {
-        let steps = find([], initial, final);
+    const exec = (initialName, finalName, val) => {
+        let steps = findPath(initialName, finalName);
         if (steps === null) {
-            throw new Error(`no path found for ${initial} -> ${final}`);
+            throw new Error(`no path found for ${initialName} -> ${finalName}`);
         }
         let tempVal = val;
         for (let i = 0; i < steps.length; i += 2) {
