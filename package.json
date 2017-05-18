@@ -1,10 +1,10 @@
 {
   "name": "paph",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/g-harel/paph/issues"
   },
-  "homepage": "https://github.com/g-harel/paph#readme"
+  "homepage": "https://github.com/g-harel/paph#readme",
+  "devDependencies": {
+    "jest": "^20.0.3"
+  }
 }
