@@ -27,3 +27,19 @@ paph.exec(start, end, object);
            └──┬──┘      └┐
             String     Object
 ````
+
+````javascript
+const paph = require('paph');
+
+paph.add('v1', 'v2', (data) => {
+    // ...
+    return modifiedData
+});
+
+paph.add('v2', 'v3', (data) => {
+    // ...
+    return modifiedData
+});
+
+paph.exec('v1', 'v3', data);
+````
