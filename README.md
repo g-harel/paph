@@ -27,8 +27,8 @@ const store = paph();
 
 // creating a relationship
 store.add(start, end, transformer[, weight]);
-           └──┬──┘       └┐         │
-            String     Function    Number
+           └──┬──┘       └┐          │
+            String     Function     Number
 
 // querying relationships
 store.exec(start, end); // returns combined function
