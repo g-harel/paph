@@ -27,11 +27,11 @@ const store = paph();
 
 // creating a relationship
 store.add(start, end, transformer[, weight]);
-           └──┬──┘       └┐          │
+           └──┬──┘       └┐           │
             String     Function     Number
 
 // querying relationships
-store.exec(start, end); // returns combined function
+store.query(start, end); // returns combined function
             └──┬──┘
              String
 
@@ -57,5 +57,5 @@ store.add('v2', 'v3', (data) => {
     return modifiedData
 });
 
-store.exec('v1', 'v3')(data);
+store.query('v1', 'v3')(data);
 ````
