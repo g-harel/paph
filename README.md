@@ -29,13 +29,13 @@ const store = paph();
 
 // creating a relationship
 store.add(start, end, transformer[, weight]);
-            └─┬──┘       └┐          │
-            String      Function    Number
+            └─┬──┘       └┐          │
+            String      Function    Number
 
 // querying relationships
 store.query(start, end); // returns combined function
-              └─┬──┘
-              String
+              └─┬──┘
+              String
 
 // create copy
 const forkedStore = store.fork();
@@ -51,12 +51,12 @@ const store = paph();
 
 store.add('v1', 'v2', (data) => {
     // ...
-    return modifiedData;
+    return modifiedData;
 });
 
 store.add('v2', 'v3', (data) => {
     // ...
-    return modifiedData;
+    return modifiedData;
 });
 
 store.query('v1', 'v3')(data);

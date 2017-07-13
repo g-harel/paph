@@ -1,6 +1,9 @@
 'use strict';
 
-const add = (transforms) => (initialName, finalName, transform, weight = 1) => {
+const add = (transforms) => (initialName, finalName, weight = 1, transform) => {
+    if (weight < 0) {
+        throw new Error(`negative weights are not allowed ${initialName} -> +${weight} -> ${finalName}`);
+    }
     if (!transforms[initialName]) {
         transforms[initialName] = [];
     }
