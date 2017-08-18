@@ -28,9 +28,9 @@ const paph = require('paph');
 const store = paph();
 
 // creating a relationship
-store.add(start, end, transformer[, weight]);
-            └─┬──┘       └┐          │
-            String      Function    Number
+store.add(start, end, weight, transformer);
+            └─┬──┘      │         └┐          
+            String    Number   Function    
 
 // querying relationships
 store.query(start, end); // returns combined function
@@ -49,12 +49,12 @@ const paph = require('paph');
 
 const store = paph();
 
-store.add('v1', 'v2', (data) => {
+store.add('v1', 'v2', 1, (data) => {
     // ...
     return modifiedData;
 });
 
-store.add('v2', 'v3', (data) => {
+store.add('v2', 'v3', 1, (data) => {
     // ...
     return modifiedData;
 });
