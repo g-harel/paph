@@ -8,8 +8,6 @@ Shortest path between `start` and `end` is found before returning a combined fun
 
 Built in protection against cycles.
 
-Weight of each "branch" can be specified. Otherwise, the default of `1` is used.
-
 Use `fork` to create a copy of a paph object.
 
 Use `freeze` to create a read-only copy with built-in memoization.
@@ -29,8 +27,8 @@ const store = paph();
 
 // creating a relationship
 store.add(start, end, weight, transformer);
-            └─┬──┘      │         └┐          
-            String    Number   Function    
+            └─┬──┘      │         └┐
+            String    Number   Function
 
 // querying relationships
 store.query(start, end); // returns combined function
