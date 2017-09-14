@@ -1,7 +1,5 @@
 # [paph](https://github.com/g-harel/paph)
 
-<p align="center"><img src="https://user-images.githubusercontent.com/9319710/27893761-c540df86-61d5-11e7-951d-5e2b08694638.png" width="600"/></p>
-
 > Data-flow-graph based tool to transform data.
 
 Shortest path between `start` and `end` is found before returning a combined function of all the transforms.
