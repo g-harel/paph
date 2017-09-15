@@ -152,4 +152,5 @@ const paph = (transforms = {}) => {
     };
 };
 
-module.exports = paph;
+// exported function does not pass arguments to the paph function.
+module.exports = () => paph();
