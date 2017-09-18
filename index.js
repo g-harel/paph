@@ -1,18 +1,24 @@
 'use strict';
 
-// TODO store the result of previously paritally computed succesful paths
-//    > path between points a and c is requested
-//    > path1 gets to node b with weight w and continues to c
-//    > path2 gets to node b with weight < w
-//    # work from path1 between b and c can be reused for path2
+const is = (type, value, message) => {
+    if (typeof value !== type) {
+        throw new Error(message || `${value} is not a ${type}`);
+    }
+};
 
 // function to add a path into a store (transforms)
 const add = (transforms) => (initialName, finalName, weight = 1, transform) => {
-    // negative/zero weight paths can cause an issue where it is possible for the
-    // path finding algorithm to loop infinitely since there is no more penalty.
+    is('string', initialName, `initialName is not a string: ${initialName}`);
+    is('string', finalName, `finalName is not a string: ${finalName}`);
+    is('number', weight, `weight is not a number: ${weight}`);
+    is('function', transform, `transform is not a function: ${transform}`);
+
+    // negative/zero weight paths can cause an issue where it is possible for the path
+    // finding algorithm to loop infinitely since there is no weight penalty per cycle.
     if (weight < 0) {
         throw new Error(`negative weights are not allowed (weight of ${weight} between ${initialName} and ${finalName})`);
     }
+
     // transforms is a map where outgoing paths are stored in an array at the key
     // of the node. the array must be created if it doesn't exist.
     if (!transforms[initialName]) {
@@ -26,15 +32,28 @@ const findPath = (transforms) => (initialName, finalName) => {
     // traversed is a map which stores the lowest weight at which a node was reached.
     const traversed = {};
 
+    // precomputed is a map that keeps track of the shortest path from the node (addressed
+    // as a key) to the final node.
+    const precomputed = {};
+
     // recursive function to navigate the transforms structure and return the shortest path.
     // it uses the finalName variable from its parent scope. a failiure to find a path will
     // result in a return value of null.
     const _find = (currentAddress, currentWeight, currentName) => {
-        // if the current node has already been reached using a lower weight path, there is no
-        // purpose in continuing to search past this point.
-        if (traversed[currentName] < currentWeight) {
-            return null;
+        if (traversed[currentName]) {
+            // if the current node has already been reached using a lower weight path, there
+            // is no purpose in continuing to search past this point.
+            if (traversed[currentName] < currentWeight) {
+                return null;
+            }
+
+            // if the node has been traversed and there is no precomputed path, this node has
+            // no path to the final node and there is no reason to proceed further.
+            if (!precomputed[currentName]) {
+                return null;
+            }
         }
+
         // if the algorithm has succeded in finding a path, the address will be returned.
         // the computed weight of the address is also included in this return value since
         // it will be needed to evaluate the performance of different paths.
@@ -42,17 +61,33 @@ const findPath = (transforms) => (initialName, finalName) => {
             currentAddress.weight = currentWeight;
             return currentAddress;
         }
+
         // past this point, the current path is the fastest to get to the current node.
         traversed[currentName] = currentWeight;
+
+        // if this node has already been visited, the work of finding a path to the final
+        // node has already been done and has been stored in the precomputed map. in this
+        // case, and since it is know that the current weight is the lowest to get to this
+        // node, the fastest path has been found.
+        const precomputedPath = precomputed[currentName];
+        if (precomputedPath != undefined) {
+            return Object.assign(
+                currentAddress.concat(precomputedPath),
+                {weight: currentWeight + precomputedPath.weight}
+            );
+        }
+
         // fetch the outgoing paths from this node and make sure that there are at least one.
         // since the optimal path cannot be inferred, all options must be considered.
         let transformPossibilities = transforms[currentName];
-        if (!transformPossibilities) {
+        if (!transformPossibilities === true) {
             return null;
         }
+
         // create a copy of the current address so that it doesn't pollute the search through
         // the other nodes (array is passed as reference)
         let newAddress = currentAddress.slice();
+
         // adding the node to the address array
         newAddress.push(currentName);
         let successes = [];
@@ -66,14 +101,33 @@ const findPath = (transforms) => (initialName, finalName) => {
                 successes.push(path);
             }
         }
-        // the fastest successful path is returned
+
         if (successes.length > 0) {
-            return successes.reduce((shortestSuccess, currentSuccess) => {
-                return shortestSuccess.weight > currentSuccess.weight
-                    ? currentSuccess
-                    : shortestSuccess;
+            // since the successes array is guaranteed to have at least one value, it is safe
+            // to assume that the result of the reduce will be a valid address and not the
+            // initial value passed to reduce. also, by design, the fastest path will not
+            // be the initial value even if the fastest path has a weight of infinity.
+            // (Infinity > Infinity === false) ~> ternary uses current success.
+            const fastestPath = successes.reduce((shortestSuccess, currentSuccess) => {
+                return currentSuccess.weight > shortestSuccess.weight
+                    ? shortestSuccess
+                    : currentSuccess;
             }, {weight: Infinity});
+
+            // these statements will only be reached if there is no registered fastest path
+            // so there is no need to check that it already exists. there is also a guarantee
+            // that the fastest path is being used because it has just been calculated. the
+            // path's address first needs to be cut to only the part after the current node
+            // since the path finding function always returns the full path. then, the weight
+            // needs to be calculated to take into account the shortening of the address.
+            precomputed[currentName] = Object.assign(
+                fastestPath.slice(currentAddress.length),
+                {weight: fastestPath.weight - currentWeight}
+            );
+
+            return fastestPath;
         }
+
         return null;
     };
 
@@ -83,13 +137,19 @@ const findPath = (transforms) => (initialName, finalName) => {
 
 // function to generate a composite function from the result of the findPath function.
 const query = (transforms) => (initialName, finalName) => {
+    is('string', initialName, `initialName is not a string: ${initialName}`);
+    is('string', finalName, `finalName is not a string: ${finalName}`);
+
+    // the path finding function will return an address when a path is found or a null
+    // when no possible path exists.
     let steps = findPath(transforms)(initialName, finalName);
     if (steps === null) {
         throw new Error(`no path found for ${initialName} -> ${finalName}`);
     }
+
     // the result of findPath is an array of keys which form an address from the initial
-    // to the final node. Since functions need to be wrapped from the inside out, the order
-    // of these keys must be reversed.
+    // to the final node. Since functions between the nodes need to be wrapped from the
+    // inside out, the order of these keys must be reversed.
     steps.reverse();
     let func = (obj) => obj;
     for (let i = 0; i < steps.length; i += 2) {
