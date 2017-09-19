@@ -2,7 +2,7 @@
 
 > Data-flow-graph based tool to transform data.
 
-Shortest path between `start` and `end` is found before returning a combined function of all the transforms.
+Shortest path between `start` and `end` is found before returning a combined function of all the transitions.
 
 Built in protection against cycles.
 
@@ -24,8 +24,8 @@ const paph = require('paph');
 const store = paph();
 
 // creating a relationship
-store.add(start, end, weight, transformer);
-            └─┬──┘      │         └┐
+store.add(start, end, weight, transition);
+            └─┬──┘      │        └┐
             String    Number   Function
 
 // querying relationships

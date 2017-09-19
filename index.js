@@ -6,12 +6,12 @@ const is = (type, value, message) => {
     }
 };
 
-// function to add a path into a store (transforms)
-const add = (transforms) => (initialName, finalName, weight = 1, transform) => {
+// function to add a path into a store (transitions)
+const add = (transitions) => (initialName, finalName, weight = 1, transition) => {
     is('string', initialName, `initialName is not a string: ${initialName}`);
     is('string', finalName, `finalName is not a string: ${finalName}`);
     is('number', weight, `weight is not a number: ${weight}`);
-    is('function', transform, `transform is not a function: ${transform}`);
+    is('function', transition, `transition is not a function: ${transition}`);
 
     // negative/zero weight paths can cause an issue where it is possible for the path
     // finding algorithm to loop infinitely since there is no weight penalty per cycle.
@@ -19,16 +19,16 @@ const add = (transforms) => (initialName, finalName, weight = 1, transform) => {
         throw new Error(`negative weights are not allowed (weight of ${weight} between ${initialName} and ${finalName})`);
     }
 
-    // transforms is a map where outgoing paths are stored in an array at the key
+    // transitions is a map where outgoing paths are stored in an array at the key
     // of the node. the array must be created if it doesn't exist.
-    if (!transforms[initialName]) {
-        transforms[initialName] = [];
+    if (!transitions[initialName]) {
+        transitions[initialName] = [];
     }
-    transforms[initialName].push({finalName, transform, weight});
+    transitions[initialName].push({finalName, transition, weight});
 };
 
 // function to find a composite path between two nodes
-const findPath = (transforms) => (initialName, finalName) => {
+const findPath = (transitions) => (initialName, finalName) => {
     // traversed is a map which stores the lowest weight at which a node was reached.
     const traversed = {};
 
@@ -36,7 +36,7 @@ const findPath = (transforms) => (initialName, finalName) => {
     // as a key) to the final node.
     const precomputed = {};
 
-    // recursive function to navigate the transforms structure and return the shortest path.
+    // recursive function to navigate the transitions structure and return the shortest path.
     // it uses the finalName variable from its parent scope. a failiure to find a path will
     // result in a return value of null.
     const _find = (currentAddress, currentWeight, currentName) => {
@@ -79,24 +79,24 @@ const findPath = (transforms) => (initialName, finalName) => {
 
         // fetch the outgoing paths from this node and make sure that there are at least one.
         // since the optimal path cannot be inferred, all options must be considered.
-        let transformPossibilities = transforms[currentName];
-        if (!transformPossibilities === true) {
+        let transitionPossibilities = transitions[currentName];
+        if (!transitionPossibilities === true) {
             return null;
         }
 
         // create a copy of the current address so that it doesn't pollute the search through
-        // the other nodes (array is passed as reference)
+        // the other nodes (array passed by reference)
         let newAddress = currentAddress.slice();
-
-        // adding the node to the address array
         newAddress.push(currentName);
+
+        // recursively check all possibile outwards transitions for successful paths to the
+        // final node and collect them into an array.
         let successes = [];
-        for (let i = 0; i < transformPossibilities.length; ++i) {
+        for (let i = 0; i < transitionPossibilities.length; ++i) {
             let tempAddress = newAddress.slice();
-            // adding the array index to the address array
             tempAddress.push(i);
-            let newWeight = currentWeight + transformPossibilities[i].weight;
-            let path = _find(tempAddress, newWeight, transformPossibilities[i].finalName);
+            let newWeight = currentWeight + transitionPossibilities[i].weight;
+            let path = _find(tempAddress, newWeight, transitionPossibilities[i].finalName);
             if (path !== null) {
                 successes.push(path);
             }
@@ -136,13 +136,13 @@ const findPath = (transforms) => (initialName, finalName) => {
 };
 
 // function to generate a composite function from the result of the findPath function.
-const query = (transforms) => (initialName, finalName) => {
+const query = (transitions) => (initialName, finalName) => {
     is('string', initialName, `initialName is not a string: ${initialName}`);
     is('string', finalName, `finalName is not a string: ${finalName}`);
 
     // the path finding function will return an address when a path is found or a null
     // when no possible path exists.
-    let steps = findPath(transforms)(initialName, finalName);
+    let steps = findPath(transitions)(initialName, finalName);
     if (steps === null) {
         throw new Error(`no path found for ${initialName} -> ${finalName}`);
     }
@@ -156,8 +156,8 @@ const query = (transforms) => (initialName, finalName) => {
         let _func = func;
         // each two address elements in the array represent a pair of <arrayPosition, node>
         // (which have been reversed previously). this means that the two array elements must
-        // be used together to read one function from the transforms store.
-        func = (obj) => _func(transforms[steps[i+1]][steps[i]].transform(obj));
+        // be used together to read one function from the transitions store.
+        func = (obj) => _func(transitions[steps[i+1]][steps[i]].transition(obj));
     }
     return func;
 };
@@ -182,31 +182,31 @@ const memoize = (fn) => {
     };
 };
 
-// function to copy the transforms data structure. it will only work for a map of arrays.
+// function to copy the transitions data structure. it will only work for a map of arrays.
 // the array's contents are not cloned/modified by this process.
-const cloneTransforms = (transforms) => {
-    const _transforms = Object.assign({}, transforms);
-    Object.keys(_transforms).forEach((key) => {
-        _transforms[key] = _transforms[key].slice();
+const cloneTransitions = (transitions) => {
+    const transitionsCopy = Object.assign({}, transitions);
+    Object.keys(transitionsCopy).forEach((key) => {
+        transitionsCopy[key] = transitionsCopy[key].slice();
     });
-    return _transforms;
+    return transitionsCopy;
 };
 
-// exported function which returns the package's api. it can be given an initial transforms
+// exported function which returns the package's api. it can be given an initial transitions
 // store, but there is no validation and should therefore be used with caution.
-const paph = (transforms = {}) => {
+const paph = (transitions = {}) => {
     // a frozen paph will only expose the memoized query function on a copy of the store.
     const freeze = () => ({
-        query: memoize(query(cloneTransforms(transforms))),
+        query: memoize(query(cloneTransitions(transitions))),
     });
 
-    // fork will create a new paph object with a copy of the current transforms.
-    const fork = () => paph(cloneTransforms(transforms));
+    // fork will create a new paph object with a copy of the current transitions.
+    const fork = () => paph(cloneTransitions(transitions));
 
-    // the add and query functions are implemented using currying to inject the transforms.
+    // the add and query functions are implemented using currying to inject the transitions.
     return {
-        add: add(transforms),
-        query: query(transforms),
+        add: add(transitions),
+        query: query(transitions),
         freeze,
         fork,
     };
