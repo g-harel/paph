@@ -7,12 +7,12 @@ const add = (store, start, end, weight = 1) => {
 test('rejects bad inputs', () => {
     const p = paph();
     expect(() => p.add(0))
-        .toThrow(/initial.*string.*0/);
-    expect(() => p.add('initial', 1))
-        .toThrow(/final.*string.*1/);
-    expect(() => p.add('initial', 'final', true))
+        .toThrow(/start.*string.*0/);
+    expect(() => p.add('start', 1))
+        .toThrow(/end.*string.*1/);
+    expect(() => p.add('start', 'end', true))
         .toThrow(/weight.*number.*true/);
-    expect(() => p.add('initial', 'final', 1, null))
+    expect(() => p.add('start', 'end', 1, null))
         .toThrow(/transition.*function.*null/);
     expect(() => p.query(0))
         .toThrow(/initial.*string.*0/);

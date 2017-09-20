@@ -2,7 +2,7 @@
 
 > Data-flow-graph based tool to transform data.
 
-Shortest path between `start` and `end` is found before returning a combined function of all the transitions.
+Shortest path between `initial` and `final` is found before returning a combined function of all the transitions.
 
 Built in protection against cycles.
 
@@ -29,9 +29,9 @@ store.add(start, end, weight, transition);
             String    Number   Function
 
 // querying relationships
-store.query(start, end); // returns combined function
-              └─┬──┘
-              String
+store.query(initial, final); // returns a function
+               └──┬───┘
+                String
 
 // create copy
 const forkedStore = store.fork();

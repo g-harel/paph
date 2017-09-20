@@ -7,24 +7,24 @@ const is = (type, value, message) => {
 };
 
 // function to add a path into a store (transitions)
-const add = (transitions) => (initialName, finalName, weight = 1, transition) => {
-    is('string', initialName, `initialName is not a string: ${initialName}`);
-    is('string', finalName, `finalName is not a string: ${finalName}`);
+const add = (transitions) => (startName, endName, weight = 1, transition) => {
+    is('string', startName, `startName is not a string: ${startName}`);
+    is('string', endName, `endName is not a string: ${endName}`);
     is('number', weight, `weight is not a number: ${weight}`);
     is('function', transition, `transition is not a function: ${transition}`);
 
     // negative/zero weight paths can cause an issue where it is possible for the path
     // finding algorithm to loop infinitely since there is no weight penalty per cycle.
     if (weight < 0) {
-        throw new Error(`negative weights are not allowed (weight of ${weight} between ${initialName} and ${finalName})`);
+        throw new Error(`negative weights are not allowed (weight of ${weight} between ${startName} and ${endName})`);
     }
 
     // transitions is a map where outgoing paths are stored in an array at the key
-    // of the node. the array must be created if it doesn't exist.
-    if (!transitions[initialName]) {
-        transitions[initialName] = [];
+    // of each node. the array must be created if it doesn't exist.
+    if (!transitions[startName]) {
+        transitions[startName] = [];
     }
-    transitions[initialName].push({finalName, transition, weight});
+    transitions[startName].push({endName, transition, weight});
 };
 
 // function to find a composite path between two nodes
@@ -39,7 +39,15 @@ const findPath = (transitions) => (initialName, finalName) => {
     // recursive function to navigate the transitions structure and return the shortest path.
     // it uses the finalName variable from its parent scope. a failiure to find a path will
     // result in a return value of null.
-    const _find = (currentAddress, currentWeight, currentName) => {
+    const find = (currentWeight, currentName) => {
+        // if a successful path has been found, the function can return.
+        if (currentName === finalName) {
+            return {
+                address: [],
+                weight: 0,
+            };
+        }
+
         if (traversed[currentName]) {
             // if the current node has already been reached using a lower weight path, there
             // is no purpose in continuing to search past this point.
@@ -54,15 +62,7 @@ const findPath = (transitions) => (initialName, finalName) => {
             }
         }
 
-        // if the algorithm has succeded in finding a path, the address will be returned.
-        // the computed weight of the address is also included in this return value since
-        // it will be needed to evaluate the performance of different paths.
-        if (currentName === finalName) {
-            currentAddress.weight = currentWeight;
-            return currentAddress;
-        }
-
-        // past this point, the current path is the fastest to get to the current node.
+        // at this point, the current path is the fastest to get to the current node.
         traversed[currentName] = currentWeight;
 
         // if this node has already been visited, the work of finding a path to the final
@@ -70,69 +70,55 @@ const findPath = (transitions) => (initialName, finalName) => {
         // case, and since it is know that the current weight is the lowest to get to this
         // node, the fastest path has been found.
         const precomputedPath = precomputed[currentName];
-        if (precomputedPath != undefined) {
-            return Object.assign(
-                currentAddress.concat(precomputedPath),
-                {weight: currentWeight + precomputedPath.weight}
-            );
+        if (precomputedPath !== undefined) {
+            return precomputedPath;
         }
 
-        // fetch the outgoing paths from this node and make sure that there are at least one.
-        // since the optimal path cannot be inferred, all options must be considered.
+        // fetch the outgoing paths from this node. since the optimal path cannot be inferred,
+        // all transitions must be considered.
         let transitionPossibilities = transitions[currentName];
-        if (!transitionPossibilities === true) {
+        if (transitionPossibilities === undefined) {
             return null;
         }
 
-        // create a copy of the current address so that it doesn't pollute the search through
-        // the other nodes (array passed by reference)
-        let newAddress = currentAddress.slice();
-        newAddress.push(currentName);
-
-        // recursively check all possibile outwards transitions for successful paths to the
-        // final node and collect them into an array.
-        let successes = [];
-        for (let i = 0; i < transitionPossibilities.length; ++i) {
-            let tempAddress = newAddress.slice();
-            tempAddress.push(i);
-            let newWeight = currentWeight + transitionPossibilities[i].weight;
-            let path = _find(tempAddress, newWeight, transitionPossibilities[i].finalName);
-            if (path !== null) {
-                successes.push(path);
+        // iterate through all transitions and return the one with the smallest weight.
+        const fastestPath = transitionPossibilities.reduce((shortest, currentTransition, index) => {
+            const currentSuccess = find(currentWeight + currentTransition.weight, currentTransition.endName);
+            if (currentSuccess === null) {
+                return shortest;
             }
+
+            // in the case that both values are equal, the new value is prioritized. this
+            // is especially relevant in a case where the weigth is infinity since the
+            // reduce's starting value should never be returned over real paths.
+            if (currentSuccess.weight > shortest.weight) {
+                return shortest;
+            }
+
+            // concatenating by passing an array instead of multiple arguments has
+            // been tested to have much better performance.
+            return {
+                address: currentSuccess.address.concat([currentName, index]),
+                weight: currentSuccess.weight + currentTransition.weight,
+            };
+        }, {weight: Infinity});
+
+        // in the case that there are no successes, the fastest path will default to be
+        // the reduce's starting value.
+        if (fastestPath.address === undefined) {
+            return null;
         }
 
-        if (successes.length > 0) {
-            // since the successes array is guaranteed to have at least one value, it is safe
-            // to assume that the result of the reduce will be a valid address and not the
-            // initial value passed to reduce. also, by design, the fastest path will not
-            // be the initial value even if the fastest path has a weight of infinity.
-            // (Infinity > Infinity === false) ~> ternary uses current success.
-            const fastestPath = successes.reduce((shortestSuccess, currentSuccess) => {
-                return currentSuccess.weight > shortestSuccess.weight
-                    ? shortestSuccess
-                    : currentSuccess;
-            }, {weight: Infinity});
+        // this statement will only be reached if there is no precomputed fastest path
+        // so there is no need to check if it already exists. there is also a guarantee
+        // that the fastest path is being used because it has just been calculated.
+        precomputed[currentName] = fastestPath;
 
-            // these statements will only be reached if there is no registered fastest path
-            // so there is no need to check that it already exists. there is also a guarantee
-            // that the fastest path is being used because it has just been calculated. the
-            // path's address first needs to be cut to only the part after the current node
-            // since the path finding function always returns the full path. then, the weight
-            // needs to be calculated to take into account the shortening of the address.
-            precomputed[currentName] = Object.assign(
-                fastestPath.slice(currentAddress.length),
-                {weight: fastestPath.weight - currentWeight}
-            );
-
-            return fastestPath;
-        }
-
-        return null;
+        return fastestPath;
     };
 
     // begins the search at the initialName node and returns the result.
-    return _find([], 0, initialName);
+    return find(0, initialName);
 };
 
 // function to generate a composite function from the result of the findPath function.
@@ -150,14 +136,14 @@ const query = (transitions) => (initialName, finalName) => {
     // the result of findPath is an array of keys which form an address from the initial
     // to the final node. Since functions between the nodes need to be wrapped from the
     // inside out, the order of these keys must be reversed.
-    steps.reverse();
+    const {address} = steps;
     let func = (obj) => obj;
-    for (let i = 0; i < steps.length; i += 2) {
+    for (let i = 0; i < address.length; i += 2) {
         let _func = func;
         // each two address elements in the array represent a pair of <arrayPosition, node>
         // (which have been reversed previously). this means that the two array elements must
         // be used together to read one function from the transitions store.
-        func = (obj) => _func(transitions[steps[i+1]][steps[i]].transition(obj));
+        func = (obj) => _func(transitions[address[i]][address[i+1]].transition(obj));
     }
     return func;
 };
@@ -213,4 +199,6 @@ const paph = (transitions = {}) => {
 };
 
 // exported function does not pass arguments to the paph function.
-module.exports = () => paph();
+if (typeof module !== 'undefined') {
+    module.exports = () => paph();
+}
