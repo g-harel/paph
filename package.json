@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "jest"
+    "test": "run-s eslint jest",
+    "coverage": "npm run test && codecov",
+    "jest": "jest --coverage",
+    "eslint": "eslint --ignore-path .gitignore **/*.js"
   },
   "repository": {
     "type": "git",
@@ -17,6 +20,9 @@
   },
   "homepage": "https://github.com/g-harel/paph#readme",
   "devDependencies": {
+    "codecov": "^2.3.0",
+    "eslint": "^4.7.1",
+    "eslint-config-google": "^0.9.1",
     "jest": "^20.0.4"
   }
 }

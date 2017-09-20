@@ -1,4 +1,4 @@
-# [paph](https://github.com/g-harel/paph)
+# [paph](https://github.com/g-harel/paph) [![Codecov](https://img.shields.io/codecov/c/github/g-harel/paph.svg)](https://codecov.io/gh/g-harel/paph)
 
 > Data-flow-graph based tool to transform data.
 

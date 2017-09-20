@@ -22,6 +22,7 @@
             "error",
             "always"
         ],
+        "spaced-comment": 0,
         "max-len": "off",
         "no-throw-literal": "off"
     }

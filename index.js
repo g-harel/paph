@@ -1,17 +1,40 @@
+// @flow
 'use strict';
+
+/*::
+type Transition = {
+    endName: string,
+    transition: function,
+    weight: number,
+}
+
+type Transitions = {
+    [name: string]: Array<Transition>
+}
+
+type Path = {
+    address: Array<number | string>,
+    weight: number,
+}
+*/
 
 const is = (type, value, message) => {
     if (typeof value !== type) {
-        throw new Error(message || `${value} is not a ${type}`);
+        throw new Error(message);
     }
 };
 
 // function to add a path into a store (transitions)
-const add = (transitions) => (startName, endName, weight = 1, transition) => {
+const add = (transitions /*: Transitions */) => (
+    startName /*: string */,
+    endName /*: string */,
+    weight /*: number */,
+    transition /*: function */
+) /*: void */ => {
     is('string', startName, `startName is not a string: ${startName}`);
     is('string', endName, `endName is not a string: ${endName}`);
     is('number', weight, `weight is not a number: ${weight}`);
-    is('function', transition, `transition is not a function: ${transition}`);
+    is('function', transition, `transition is not a function: ${String(transition)}`);
 
     // negative/zero weight paths can cause an issue where it is possible for the path
     // finding algorithm to loop infinitely since there is no weight penalty per cycle.
@@ -21,25 +44,31 @@ const add = (transitions) => (startName, endName, weight = 1, transition) => {
 
     // transitions is a map where outgoing paths are stored in an array at the key
     // of each node. the array must be created if it doesn't exist.
-    if (!transitions[startName]) {
+    if (transitions[startName] === undefined) {
         transitions[startName] = [];
     }
     transitions[startName].push({endName, transition, weight});
 };
 
 // function to find a composite path between two nodes
-const findPath = (transitions) => (initialName, finalName) => {
+const findPath = (transitions /*: Transitions */) => (
+    initialName /*: string */,
+    finalName /*: string */
+) /*: Path | null */ => {
     // traversed is a map which stores the lowest weight at which a node was reached.
-    const traversed = {};
+    const traversed /*: { [name: string]: number } */ = {};
 
     // precomputed is a map that keeps track of the shortest path from the node (addressed
     // as a key) to the final node.
-    const precomputed = {};
+    const precomputed /*: { [name: string]: Path } */ = {};
 
     // recursive function to navigate the transitions structure and return the shortest path.
     // it uses the finalName variable from its parent scope. a failiure to find a path will
     // result in a return value of null.
-    const find = (currentWeight, currentName) => {
+    const find = (
+        currentWeight /*: number */,
+        currentName /*: string */
+    ) /*: Path | null */ => {
         // if a successful path has been found, the function can return.
         if (currentName === finalName) {
             return {
@@ -57,7 +86,7 @@ const findPath = (transitions) => (initialName, finalName) => {
 
             // if the node has been traversed and there is no precomputed path, this node has
             // no path to the final node and there is no reason to proceed further.
-            if (!precomputed[currentName]) {
+            if (precomputed[currentName] === undefined) {
                 return null;
             }
         }
@@ -82,30 +111,28 @@ const findPath = (transitions) => (initialName, finalName) => {
         }
 
         // iterate through all transitions and return the one with the smallest weight.
-        const fastestPath = transitionPossibilities.reduce((shortest, currentTransition, index) => {
-            const currentSuccess = find(currentWeight + currentTransition.weight, currentTransition.endName);
-            if (currentSuccess === null) {
-                return shortest;
+        const fastestPath = transitionPossibilities.reduce((shortestPath, transition, index) => {
+            const successfulPath = find(currentWeight + transition.weight, transition.endName);
+            if (successfulPath === null) {
+                return shortestPath;
             }
 
-            // in the case that both values are equal, the new value is prioritized. this
-            // is especially relevant in a case where the weigth is infinity since the
-            // reduce's starting value should never be returned over real paths.
-            if (currentSuccess.weight > shortest.weight) {
-                return shortest;
+            const totalWeight = successfulPath.weight + transition.weight;
+
+            if (shortestPath !== null && totalWeight >= shortestPath.weight) {
+                return shortestPath;
             }
 
             // concatenating by passing an array instead of multiple arguments has
             // been tested to have much better performance.
             return {
-                address: currentSuccess.address.concat([currentName, index]),
-                weight: currentSuccess.weight + currentTransition.weight,
+                address: successfulPath.address.concat([currentName, index]),
+                weight: totalWeight,
             };
-        }, {weight: Infinity});
+        }, null);
 
-        // in the case that there are no successes, the fastest path will default to be
-        // the reduce's starting value.
-        if (fastestPath.address === undefined) {
+        // in the case that there are no successes, return a failiure
+        if (fastestPath === null) {
             return null;
         }
 
@@ -122,7 +149,10 @@ const findPath = (transitions) => (initialName, finalName) => {
 };
 
 // function to generate a composite function from the result of the findPath function.
-const query = (transitions) => (initialName, finalName) => {
+const query = (transitions /*: Transitions */) => (
+    initialName /*: string */,
+    finalName /*: string */
+) /*: (mixed) => mixed */ => {
     is('string', initialName, `initialName is not a string: ${initialName}`);
     is('string', finalName, `finalName is not a string: ${finalName}`);
 
@@ -141,9 +171,9 @@ const query = (transitions) => (initialName, finalName) => {
     for (let i = 0; i < address.length; i += 2) {
         let _func = func;
         // each two address elements in the array represent a pair of <arrayPosition, node>
-        // (which have been reversed previously). this means that the two array elements must
-        // be used together to read one function from the transitions store.
-        func = (obj) => _func(transitions[address[i]][address[i+1]].transition(obj));
+        const name = String(address[i]);
+        const transitionIndex = Number(address[i+1]);
+        func = (obj) => _func(transitions[name][transitionIndex].transition(obj));
     }
     return func;
 };
@@ -151,11 +181,14 @@ const query = (transitions) => (initialName, finalName) => {
 // function to memoize the query function. by design this implementation will only work
 // to memoize a function with two arguments. it also makes the assumption that the input
 // is a pure function which will not change its output. it returns the memoized function.
-const memoize = (fn) => {
+const memoize = (fn /*: (string, string) => mixed */) => {
     // store is a map where the stored outputs can be addressed (store[arg1][arg2]).
     const store = {};
 
-    return (a, b) => {
+    return (
+        a /*: string */,
+        b /*: string */
+    ) /*: mixed */ => {
         if (store[a] && store[a][b]) {
             return store[a][b];
         }
@@ -170,7 +203,7 @@ const memoize = (fn) => {
 
 // function to copy the transitions data structure. it will only work for a map of arrays.
 // the array's contents are not cloned/modified by this process.
-const cloneTransitions = (transitions) => {
+const cloneTransitions = (transitions /*: Transitions */) /*: Transitions */ => {
     const transitionsCopy = Object.assign({}, transitions);
     Object.keys(transitionsCopy).forEach((key) => {
         transitionsCopy[key] = transitionsCopy[key].slice();
@@ -180,7 +213,7 @@ const cloneTransitions = (transitions) => {
 
 // exported function which returns the package's api. it can be given an initial transitions
 // store, but there is no validation and should therefore be used with caution.
-const paph = (transitions = {}) => {
+const paph = (transitions /*: Transitions */ = {}) => {
     // a frozen paph will only expose the memoized query function on a copy of the store.
     const freeze = () => ({
         query: memoize(query(cloneTransitions(transitions))),
