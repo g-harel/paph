@@ -199,6 +199,4 @@ const paph = (transitions = {}) => {
 };
 
 // exported function does not pass arguments to the paph function.
-if (typeof module !== 'undefined') {
-    module.exports = () => paph();
-}
+module.exports = () => paph();
