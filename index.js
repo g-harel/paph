@@ -192,7 +192,7 @@ const memoize = (fn /*: (string, string) => mixed */) => {
         if (store[a] && store[a][b]) {
             return store[a][b];
         }
-        if (!store[a]) {
+        if (store[a] === undefined) {
             store[a] = {};
         }
         const temp = fn(a, b);

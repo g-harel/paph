@@ -4,10 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "codecov": "codecov",
     "test": "run-s eslint jest",
-    "coverage": "npm run test && codecov",
     "jest": "jest --coverage",
-    "eslint": "eslint --ignore-path .gitignore **/*.js"
+    "eslint": "eslint --ignore-path .gitignore **/*.js",
+    "coverage": "run-s test && codecov"
   },
   "repository": {
     "type": "git",
