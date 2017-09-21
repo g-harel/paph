@@ -7,7 +7,7 @@
     "codecov": "codecov",
     "test": "run-s eslint jest",
     "jest": "jest --coverage",
-    "eslint": "eslint --ignore-path .gitignore **/*.js",
+    "eslint": "eslint --ignore-path .gitignore **/*.js --fix",
     "coverage": "run-s test && codecov"
   },
   "repository": {
