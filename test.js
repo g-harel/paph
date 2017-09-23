@@ -1,18 +1,37 @@
 const paph = require('./index');
 
-const add = (store, start, end, weight = 1) => {
-    store.add(start, end, weight, (a) => a += ` ${start}${end}`);
+const add = (store, startName, endName, weight = 1) => {
+    store.add({
+        startName,
+        endName,
+        weight,
+        transition: (a) => a += ` ${startName}${endName}`,
+    });
 };
 
 test('rejects bad inputs', () => {
     const p = paph();
-    expect(() => p.add(0))
+    expect(() => p.add({
+        startName: 0,
+    }))
         .toThrow(/start.*string.*0/);
-    expect(() => p.add('start', 1))
+    expect(() => p.add({
+        startName: 'start',
+        endName: 1,
+    }))
         .toThrow(/end.*string.*1/);
-    expect(() => p.add('start', 'end', true))
+    expect(() => p.add({
+        startName: 'start',
+        endName: 'end',
+        weight: true,
+    }))
         .toThrow(/weight.*number.*true/);
-    expect(() => p.add('start', 'end', 1, null))
+    expect(() => p.add({
+        startName: 'start',
+        endName: 'end',
+        weight: 1,
+        transition: null,
+    }))
         .toThrow(/transition.*function.*null/);
     expect(() => p.query(0))
         .toThrow(/initial.*string.*0/);
@@ -20,7 +39,7 @@ test('rejects bad inputs', () => {
         .toThrow(/final.*string.*1/);
 });
 
-test('finds a path when it exists', () => {
+test.only('finds a path when it exists', () => {
     const p = paph();
     add(p, '0', '1');
     add(p, '1', '2');
@@ -76,7 +95,12 @@ test('picks the first added transitions when weights are equal', () => {
 
 test('doesn\'t allow negative weights', () => {
     const p = paph();
-    expect(() => p.add('a', 'b', -1, () => {}))
+    expect(() => p.add({
+        startName: 'a',
+        endName: 'b',
+        weight: -1,
+        transition: () => {},
+    }))
         .toThrow(/negative/);
 });
 
@@ -91,80 +115,31 @@ test('doesn\'t get stuck in cycles', () => {
         .toThrow(Error);
 });
 
-test('can freeze the current state', () => {
-    const p = paph();
-    add(p, '0', '1');
-    add(p, '1', '2');
-    expect(p.query('0', '2')(''))
-        .toBe(' 01 12');
-    expect(p.freeze().query('0', '2')(''))
-        .toBe(' 01 12');
-});
-
-test('frozen state cannot be modified', () => {
-    const p = paph();
-    add(p, '0', '1');
-    add(p, '1', '2');
-    expect(p.query('0', '2')(''))
-        .toBe(' 01 12');
-    const q = p.freeze();
-    add(p, '0', '2');
-    expect(p.query('0', '2')(''))
-        .toBe(' 02');
-    expect(q.query('0', '2')(''))
-        .toBe(' 01 12');
-});
-
-test('freezing should increase performance', () => {
+test('results should be partailly memoized', () => {
     let p = paph();
     const cap = 1000;
-    const queries = 50;
     for (let i = 0; i <= cap; ++i) {
         let final = Math.min(i+1+Math.floor(Math.random()*4), cap);
         let weight = 1+Math.floor(Math.random()*4);
-        p.add(String(i), String(final), weight, () => {});
+        p.add({
+            startName: String(i),
+            endName: String(final),
+            weight,
+            transition: (a) => a += String(i),
+        });
     }
-    const timeRegularStart = process.hrtime();
-    for (let i = 0; i < queries; ++i) {
-        p.query('0', String(cap));
-    }
-    const timeRegular = process.hrtime(timeRegularStart)[0] * 1000 + process.hrtime(timeRegularStart)[1] / 1000000;
-    const q = p.freeze();
-    const timeFrozenStart = process.hrtime();
-    for (let i = 0; i < queries; ++i) {
-        q.query('0', String(cap));
-    }
-    const timeFrozen = process.hrtime(timeFrozenStart)[0] * 1000 + process.hrtime(timeFrozenStart)[1] / 1000000;
-    console.log(`frozen was ${(timeRegular/timeFrozen).toFixed(5)}x faster (${timeRegular}ms vs. ${timeFrozen}ms)`);
-    expect(timeFrozen < timeRegular)
+
+    const timeColdStart = process.hrtime();
+    const cold = p.query('0', String(cap))('');
+    const timeCold = process.hrtime(timeColdStart)[0] * 1000 + process.hrtime(timeColdStart)[1] / 1000000;
+
+    const timeHotStart = process.hrtime();
+    const hot = p.query('0', String(cap))('');
+    const timeHot = process.hrtime(timeHotStart)[0] * 1000 + process.hrtime(timeHotStart)[1] / 1000000;
+
+    expect(cold === hot)
         .toBe(true);
-});
-
-test('can fork the current state', () => {
-    const p = paph();
-    add(p, '0', '1');
-    add(p, '1', '2');
-    expect(p.query('0', '2')(''))
-        .toBe(' 01 12');
-    expect(p.fork().query('0', '2')(''))
-        .toBe(' 01 12');
-});
-
-test('forked state is independant of original', () => {
-    const p = paph();
-    add(p, '0', '1');
-    add(p, '1', '2');
-    expect(p.query('0', '2')(''))
-        .toBe(' 01 12');
-    const q = p.fork();
-    add(p, '0', '2');
-    expect(p.query('0', '2')(''))
-        .toBe(' 02');
-    expect(q.query('0', '2')(''))
-        .toBe(' 01 12');
-    add(q, '0', '3');
-    expect(() => p.query('0', '3'))
-        .toThrow(Error);
-    expect(q.query('0', '3')(''))
-        .toBe(' 03');
+    console.log(`hot was ${(timeCold/timeHot).toFixed(5)}x faster (${timeCold}ms vs. ${timeHot}ms)`);
+    expect(timeHot < timeCold)
+        .toBe(true);
 });

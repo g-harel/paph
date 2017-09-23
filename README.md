@@ -8,10 +8,6 @@ Shortest path between `initial` and `final` is found before returning a combined
 
 Built in protection against cycles.
 
-Use `fork` to create a copy of a paph object.
-
-Use `freeze` to create a read-only copy with built-in memoization.
-
 ## Install
 
 ````
@@ -34,12 +30,6 @@ store.add(start, end, weight, transition);
 store.query(initial, final); // returns a function
                └──┬───┘
                 String
-
-// create copy
-const forkedStore = store.fork();
-
-// create read-only copy with memoization
-const frozenStore = store.freeze();
 ````
 
 ````javascript
