@@ -1,34 +1,34 @@
 const paph = require('./index');
 
-const add = (store, startName, endName, weight = 1) => {
+const add = (store, start, end, weight = 1) => {
     store.add({
-        startName,
-        endName,
+        start,
+        end,
         weight,
-        transition: (a) => a += ` ${startName}${endName}`,
+        transition: (a) => a += ` ${start}${end}`,
     });
 };
 
 test('rejects bad inputs', () => {
     const p = paph();
     expect(() => p.add({
-        startName: 0,
+        start: 0,
     }))
         .toThrow(/start.*string.*0/);
     expect(() => p.add({
-        startName: 'start',
-        endName: 1,
+        start: 'start',
+        end: 1,
     }))
         .toThrow(/end.*string.*1/);
     expect(() => p.add({
-        startName: 'start',
-        endName: 'end',
+        start: 'start',
+        end: 'end',
         weight: true,
     }))
         .toThrow(/weight.*number.*true/);
     expect(() => p.add({
-        startName: 'start',
-        endName: 'end',
+        start: 'start',
+        end: 'end',
         weight: 1,
         transition: null,
     }))
@@ -39,7 +39,7 @@ test('rejects bad inputs', () => {
         .toThrow(/final.*string.*1/);
 });
 
-test.only('finds a path when it exists', () => {
+test('finds a path when it exists', () => {
     const p = paph();
     add(p, '0', '1');
     add(p, '1', '2');
@@ -82,6 +82,8 @@ test('finds the path with the lowest weight', () => {
     add(p, '2', '3', 1);
     expect(p.query('0', '3')(''))
         .toBe(' 01 12 23');
+    expect(p.query('0', '3')(''))
+        .toBe(' 01 12 23');
 });
 
 test('picks the first added transitions when weights are equal', () => {
@@ -96,8 +98,8 @@ test('picks the first added transitions when weights are equal', () => {
 test('doesn\'t allow negative weights', () => {
     const p = paph();
     expect(() => p.add({
-        startName: 'a',
-        endName: 'b',
+        start: 'a',
+        end: 'b',
         weight: -1,
         transition: () => {},
     }))
@@ -122,8 +124,8 @@ test('results should be partailly memoized', () => {
         let final = Math.min(i+1+Math.floor(Math.random()*4), cap);
         let weight = 1+Math.floor(Math.random()*4);
         p.add({
-            startName: String(i),
-            endName: String(final),
+            start: String(i),
+            end: String(final),
             weight,
             transition: (a) => a += String(i),
         });
