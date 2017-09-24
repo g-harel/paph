@@ -39,9 +39,35 @@ test('rejects bad inputs', () => {
         .toThrow(/final.*string.*1/);
 });
 
+test('uses a default weight of 1', () => {
+    const p = paph();
+    p.add({
+        start: 'a',
+        end: 'b',
+        transition: () => true,
+    });
+    p.add({
+        start: 'a',
+        end: 'b',
+        weight: 1.000001,
+        transition: () => 1,
+    });
+    expect(p.query('a', 'b')())
+        .toBe(true);
+    p.add({
+        start: 'a',
+        end: 'b',
+        weight: 0.999999,
+        transition: () => 0,
+    });
+    expect(p.query('a', 'b')())
+        .toBe(0);
+});
+
 test('finds a path when it exists', () => {
     const p = paph();
     add(p, '0', '1');
+    add(p, '0', '4');
     add(p, '1', '2');
     add(p, '2', '3');
     expect(p.query('0', '3')(''))

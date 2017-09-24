@@ -23,9 +23,9 @@ const paph = require('paph');
 const store = paph();
 
 // creating a relationship
-store.add(start, end, weight, transition);
-            └─┬──┘      │        └┐
-            String    Number   Function
+store.add({start, end, weight?, transition});
+             └─┬──┘      │        └┐
+             String    Number   Function
 
 // querying relationships
 store.query(initial, final); // returns a function

@@ -140,13 +140,13 @@ const findPath = (transitions /*: Transitions */, initial /*: Name */, final /*:
 const query = (transitions /*: Transitions */, initial /*: Name */, final /*: Name */) /*: function */ => {
     // the path finding function will return an address when a path is found or a null
     // when no possible path exists.
-    let steps = findPath(transitions, initial, final);
-    if (steps === null) {
+    let path = findPath(transitions, initial, final);
+    if (path === null) {
         throw new Error(`no path found for "${initial}" -> "${final}"`);
     }
 
     // the Path is used to wrap transitions one inside the other to form a single function.
-    const {address} = steps;
+    const {address} = path;
     let func = (obj) => obj;
     for (let i = 0; i < address.length; i += 2) {
         let _func = func;
@@ -167,7 +167,7 @@ const paph = () => {
         }
     } */ = {};
 
-    const _add = ({start, end, weight, transition} /*: Transition */) => {
+    const _add = ({start, end, weight = 1, transition} /*: Transition */) => {
         assert(typeof start === 'string' && start, `start is not a valid string: ${start}`);
         assert(typeof end === 'string' && end, `end is not a valid string: ${end}`);
         assert(typeof weight === 'number', `weight is not a number: ${weight}`);
