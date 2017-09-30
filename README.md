@@ -1,5 +1,6 @@
 # [paph](https://github.com/g-harel/paph)
 
+[![NPM version](https://img.shields.io/npm/v/paph.svg)](https://www.npmjs.com/package/paph)
 [![Travis](https://api.travis-ci.org/g-harel/paph.svg?branch=master)](https://travis-ci.org/g-harel/paph)
 [![Codecov](https://img.shields.io/codecov/c/github/g-harel/paph.svg)](https://codecov.io/gh/g-harel/paph)
 
