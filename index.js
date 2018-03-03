@@ -119,7 +119,7 @@ const findPath = (transitions /*: Transitions */, initial /*: Name */, final /*:
             };
         }, null);
 
-        // in the case that there are no successes, return a failiure
+        // in the case that there are no successes, return a failure
         if (fastestPath === null) {
             return null;
         }

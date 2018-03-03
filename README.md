@@ -39,15 +39,24 @@ const paph = require('paph');
 
 const store = paph();
 
-store.add('v1', 'v2', 1, (data) => {
-    // ...
-    return modifiedData;
+store.add({
+    start: 'v1',
+    end: 'v2',
+    weight: 1,
+    transition: (data) => {
+        return data + '1,2 ';
+    },
 });
 
-store.add('v2', 'v3', 1, (data) => {
-    // ...
-    return modifiedData;
+store.add({
+    start: 'v2',
+    end: 'v3',
+    weight: 1,
+    transition: (data) => {
+        return data + '2,3 ' ;
+    },
 });
 
-store.query('v1', 'v3')(data);
+store.query('v1', 'v3')('');
+//=> '1,2 2,3'
 ````
